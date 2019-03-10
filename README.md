@@ -88,71 +88,121 @@ session, err := r.Connect(r.ConnectOpts{
   Password: "xxxx",
 })
 
-r.Expr().Run()
+r.Expr([]interface{}{1, 2, 3, 4, 5}).Run(session)
 
-r.Expr().Run()
-r.DB().TAble().Get().Run()
+r.Expr(map[string]interface{}{"a": 1, "b": 2, "c": 3}).Run(session)
+r.DB("database").Table("table").Get("GUID").Run(session)
 
-r.Expr().Map().Run()
+r.Expr([]interface{}{1, 2, 3, 4, 5}).Map(func (row Term) interface{} {
+  return row.Add(1)
+}).Run(session)
 
-r.Expr().Map().Run()
+r.Expr([]interface{}{1, 2, 3, 4, 5}).Map(r.Row.Add(1)).Run(session)
 
-r.DB("").Table().Between().Run()
+r.DB("database").Table("table").Between(1, 10 r.BetweenOpts{
+  Index: "num",
+  RightBound: "closed",
+}).Run(session)
 
-r.Table().Insert(doc, r.InsertOpts{})
+r.Table("test").Insert(doc, r.InsertOpts{
+  Conflict: func(id, oldDoc, newDoc r.Term) interface{} {
+    return newDoc.Merge(map[string]interface{}{
+      "count": oldDoc.Add(newDoc.Field("count")),
+    })
+  }
+})
 
-res, err := r.DB().Table().Get().Run()
-if err != nil {}
+res, err := r.DB("database").Table("tablename").Get(key).Run(session)
+if err != nil {
+}
 defer res.Close()
 
 
 var row interface{}
-for res.Next() {
+for res.Next(&row) {
 }
 if res.Err() != nil {
 }
 
 
-var row []interface{}
-err := res.All()
-if err != nil {}
+var row interface{}
+err := res.All(&row)
+if err != nil {
+}
 
 var row interface{}
-err := res.One()
-if err == r.ErrEmptyResult{}
-if err != nil {}
+err := res.One(&row)
+if err == r.ErrEmptyResult{
+}
+if err != nil {
+}
 
-Field int ``
-Field int ``
-Field int ``
-Field int ``
-Field int ``
-Field int ``
+Field int `rethinkdb:"-"`
+Field int `rethinkdb:"myName"`
+Field int `rethinkdb:"myName,omitempty"`
+Field int `rethinkdb:",omitemtpy"`
+Field int `rethinkdb:"myName[0]"`
+Field int `rethinkdb:"myName[1]"`
 
 type Book struct {
-
+  AuthorID string `rethinkdb:"id[0]"`
+  Name string `rethinkdb:"id[1]"`
 }
 
-{"": []}
+{"id": [AUTHORID, NAME]}
 
 type Author struct {
-
+  ID string `rethinkdb:"id,omitempty"`
+  Name string `rethinkdb:"name"`
 }
 
-type Book struct {}
+type Book struct {
+  ID string `rethinkdb:"id,omitempty"`
+  Title string `title`
+  Author Author `"author_id,reference" rethinkdb_ref:"id"`
+}
 
-r.Table().Get().Merge().Run()
+r.Table("books").Get("1").Merge(func(p r Term) interface{} {
+  return map[string]interface{}{
+    "author_id": r.Table("authors").Get(p Field("author_id")),
+  }
+}).Run(session)
 
-type Book struct {}
+type Book struct {
+  ID string `rethinkdb:"id,omitempty"`
+  Title string `rethinkdb:"title"`
+  Author []Author `rethinkdb:"author_ids,reference" rethinkdb_ref:"id"`
+}
 
-r.Table().Get().Merge(func())
+r.Table().Get().Merge(func(p r.Term) interface{} {
+  return map[string]interface{}{
+    "author_ids": r.Table("authors").GetAll(r.Args(p.Field("author_ids"))).CoerceTo("array"),
+  }
+})
 
 r.Log.Out = os.Stderr
 r.Log.Out = ioutil.Discard
 
 
 func TestSometing(t *testing.T) {
-
+  mock := r.NewMock()
+  mock.On(r.Table("people")).Return([]interface{}{
+    map[]interface{}{"id": 1, "name":"John Smith"},
+    map[]interface{}{"id": 2, "name":"Jane Smith"},
+  }, nil)
+  
+  cursor, err := r.Table("people").Run(mock)
+  if err != nil {
+    t.Errorf("err is: %v", err)
+  }
+  
+  var rows []interface{}
+  err = cursor.All(&rows)
+  if err != nil {
+    t.Errorf("err is: %v", err)
+  }
+  
+  mock.AssertExpectations(t)
 }
 ```
 
@@ -162,16 +212,16 @@ go get gopkg.in/rethinkdb/rethinkdb-go.v5
 
 ```
 {
-  "": "",
-  "": "",
-  "": ""
+  "author_id": "author_1",
+  "id": "book_1",
+  "title": "The Hobbit"
 }
 
 
 {
-  "": "",
-  "": "",
-  "": ""
+  "author_ids": ["author_1", "author_2"],
+  "id": "book_1",
+  "title": "The Hobbit"
 }
 
 ```
