@@ -206,7 +206,7 @@ func TestSometing(t *testing.T) {
 }
 ```
 
-```
+```sh
 go get gopkg.in/rethinkdb/rethinkdb-go.v5
 ```
 
